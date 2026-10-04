@@ -171,6 +171,7 @@ final class Coordinator {
     /// Resolve layout settings by a Space's current numbered position, which can change when Spaces are reordered.
     private func configureWorkspaces() {
         for key in workspaces.keys {
+            workspaces[key]!.singleGroupMaxWidth = config.singleGroupMaxWidth.map { CGFloat($0) }
             workspaces[key]!.accordionPadding = CGFloat(config.accordion.padding)
             workspaces[key]!.autoOrientAccordions = config.accordion.orientation == .auto
             workspaces[key]!.setAlgorithm(algorithm(settings(for: key)))
@@ -290,6 +291,7 @@ final class Coordinator {
                                         accordionPadding: CGFloat(config.accordion.padding),
                                         autoOrientAccordions: config.accordion.orientation == .auto,
                                         algorithm: algorithm(settings))
+            workspaces[key]!.singleGroupMaxWidth = config.singleGroupMaxWidth.map { CGFloat($0) }
         }
         return key
     }

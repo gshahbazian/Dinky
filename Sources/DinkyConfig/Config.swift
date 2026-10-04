@@ -22,6 +22,7 @@ public struct Config: Equatable {
     public var followAppActivation = true
     public var accordion = Accordion()
     public var gaps = Gaps()
+    public var singleGroupMaxWidth: Int?
     /// `[display.<pattern>]` overrides, in file order.
     public var displays: [DisplayOverride] = []
     public var borders = Borders()
@@ -104,6 +105,13 @@ public struct Config: Equatable {
         }
         followAppActivation = try t.bool("follow-app-activation") ?? followAppActivation
         accordion = try t.table("accordion").map(Accordion.init) ?? accordion
+        if let single = try t.table("single-group") {
+            singleGroupMaxWidth = try single.int("max-width")
+            if let width = singleGroupMaxWidth, width <= 0 {
+                throw ConfigError(path: single.path("max-width"), "must be greater than zero")
+            }
+            try single.done()
+        }
         gaps = try t.table("gaps").map { try gaps.applying(GapsPatch($0)) } ?? gaps
         if let displayTable = try t.table("display") {
             for pattern in displayTable.keys {

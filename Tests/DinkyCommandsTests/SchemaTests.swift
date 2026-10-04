@@ -63,6 +63,9 @@ struct SchemaTests {
         rows = 2
         expand = 'rows'
 
+        [single-group]
+        max-width = 1400
+
         [accordion]
         padding = 20
         orientation = 'keep'

@@ -48,6 +48,16 @@ public indirect enum Node: Equatable, Sendable {
     case window(WindowID)
     case container(Container)
 
+    /// One window or accordion group, allowing containers with only one child.
+    var isSingleGroup: Bool {
+        switch self {
+        case .window: true
+        case .container(let c):
+            !c.children.isEmpty && (c.children.count == 1 || c.mode == .accordion)
+                && c.children.allSatisfy(\.isSingleGroup)
+        }
+    }
+
     /// Window ids in this subtree, in tree order.
     public var windows: [WindowID] {
         switch self {

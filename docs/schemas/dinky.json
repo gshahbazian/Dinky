@@ -58,6 +58,17 @@
       "default": true,
       "description": "When Cmd-Tab or a Dock click activates an app on another Space, switch there with the fast switch."
     },
+    "single-group": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max-width": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Center a lone tiled window or accordion group at this maximum width in points. Fullscreen and fixed grids are unaffected."
+        }
+      }
+    },
     "accordion": {
       "type": "object",
       "additionalProperties": false,
