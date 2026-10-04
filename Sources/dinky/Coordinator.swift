@@ -51,6 +51,8 @@ final class Coordinator {
     lazy var placeholders = DragPlaceholders()
     /// Called when the focused window changes.
     var onFocusChange: (() -> Void)?
+    var focusHistory = FocusHistory<Window.Identity>()
+    var focusedSpaces: [WindowID: UInt64] = [:]
     private(set) var lastFocused: WindowID = 0
     /// The focused display just before `lastFocused` took focus.
     private(set) var displayBeforeFocus: String?
@@ -321,6 +323,8 @@ final class Coordinator {
 
     private func forget(_ window: Window) {
         let id = window.id
+        focusHistory.forget(window.identity)
+        focusedSpaces[id] = nil
         attempts[id] = nil
         adoptTargets[id] = nil
         adopting.remove(id)
@@ -345,8 +349,15 @@ final class Coordinator {
     }
 
     /// Follows focus into the trees, so new windows land beside the focused one and accordions show it.
-    private func syncFocus() {
+    func syncFocus() {
         let id = focusedWindow
+        if let focusing, focusing.id != id, Date() < focusing.until { return }
+        focusing = nil
+        if !SpaceSwitcher.shared.switching, let window = model.windows[id], window.isDocument,
+           !window.isMinimized, isVisible(window.spaceID) {
+            focusHistory.observe(window.identity)
+            focusedSpaces[id] = window.spaceID
+        }
         if id != lastFocused {
             // Before the override goes: a new window can take focus before it shows. See Adoption.swift.
             displayBeforeFocus = displays.focusedDisplay(window: lastFocused)?.uuid
@@ -355,8 +366,6 @@ final class Coordinator {
             if id != 0 { displays.focusOverride = nil }
             onFocusChange?()
         }
-        if let focusing, focusing.id != id, Date() < focusing.until { return }
-        focusing = nil
         guard let key = placements[id]?.space, workspaces[key]?.focused != id else { return }
         edit(key) { $0.focus(id) }
     }

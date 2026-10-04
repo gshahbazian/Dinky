@@ -217,6 +217,13 @@ gaps.outer.top = 44
 
 </div>
 
+## `[mouse-follows-focus]`
+
+`enabled = false` by default. When enabled, explicit focus, workspace and move-with-follow
+commands center the pointer only when it is outside the destination window (or display
+for an empty workspace). Clicks, dragging, Cmd-Tab and native tab switching do not move
+it. Pointer input cancels a pending move; Space switches and animations finish first.
+
 ## `[focus-follows-mouse]`
 
 <div class="wide-table" markdown="1">
