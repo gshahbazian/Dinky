@@ -15,6 +15,7 @@ prints it.
 | Command | |
 |---|---|
 | `workspace <n\|prev\|next>` | Show a workspace and focus its display. `prev`/`next` step through the focused display's and don't wrap. |
+| `focus-back-and-forth` | Toggle between the last two confirmed focused windows, switching Spaces when needed. |
 | `workspace-back-and-forth` | Switch to the previous workspace. |
 | `move-window-to-workspace <n\|prev\|next> [--follow]` | Move the focused window, and with `--follow` go too. |
 | `move-window-to-display <next\|prev> [--follow]` | Move the focused window to another display's workspace. |
