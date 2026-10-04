@@ -127,6 +127,10 @@ final class AppState {
 
     /// Hands `enabled` to the parts that keep their own copy. The activation follower and hover focus read it
     /// when they decide.
+    func parkHoverAfterPointerMove() {
+        hoverFocus.parkAfterPointerMove()
+    }
+
     private func propagateEnabled() {
         // Invalidate swipe actions before coordinator enable/restore paths can reenter the run loop.
         swipeFocus.setEnabled(enabled)

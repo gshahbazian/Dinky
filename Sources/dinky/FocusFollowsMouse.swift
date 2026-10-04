@@ -164,6 +164,10 @@ final class HoverFocus {
         park()
     }
 
+    func parkAfterPointerMove() {
+        park()
+    }
+
     private func park() {
         cancel()
         parkedAt = CGEvent(source: nil)?.location

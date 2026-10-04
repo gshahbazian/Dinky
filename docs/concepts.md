@@ -81,7 +81,7 @@ layout = 'accordion'
 ## Focus
 
 One window has focus, and its border says so. `focus left` and friends move it
-to the nearest window that way; with `--boundaries all-monitors-outer-frame`,
+to the next window in spatial order; with `--boundaries all-monitors-outer-frame`,
 across the display edge too. [`[focus-follows-mouse]`](configuration.md#focus-follows-mouse)
 moves it with the pointer instead. When the focused window closes or is minimized
 and macOS leaves no key window, focus goes to its workspace's next tile. A close
@@ -107,6 +107,14 @@ cross-display close redirect and a close through a discard sheet or alert are le
 alone. The separate alert can own the key window rather than its document. Focus
 stays where macOS put it; dinky does not infer ownership from an unconfirmed focus
 loss.
+
+Directional focus steps through windows ordered by their centers: left/right
+uses horizontal position, then vertical position to break ties; up/down uses
+vertical position, then horizontal position. Identical centers are ordered by
+window ID. Opposite directions reverse the same order. With `--wrap-around`,
+repeated presses visit every window on the workspace before returning to the
+starting window, as long as their positions stay fixed. Floating and tiled
+windows share this order.
 
 ## Rule
 
