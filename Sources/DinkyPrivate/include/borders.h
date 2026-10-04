@@ -40,8 +40,8 @@ void dinky_border_move_to_space(uint32_t border, uint64_t spaceID);
 void dinky_border_hide(uint32_t border);
 void dinky_border_destroy(uint32_t border);
 
-// The front app's frontmost document window on a visible Space, 0 if none.
-// JankyBorders get_front_window.
+// The front app's AX focused or main document window on a visible Space, 0 if none.
+// If AX is unavailable, use the frontmost normal-level document window.
 uint32_t dinky_border_focused_window(void);
 
 NS_ASSUME_NONNULL_END

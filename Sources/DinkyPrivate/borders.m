@@ -1,6 +1,10 @@
 #import "borders.h"
 #import "query.h"
 #import "skylight.h"
+#import <AppKit/AppKit.h>
+#import <ApplicationServices/ApplicationServices.h>
+
+extern AXError _AXUIElementGetWindow(AXUIElementRef element, CGWindowID *window);
 
 // Window creation, shape and drawing, as JankyBorders src/misc/extern.h declares them.
 extern CGError CGSNewRegionWithRect(CGRect *rect, CFTypeRef *region);
@@ -158,7 +162,20 @@ void dinky_border_destroy(uint32_t border)
     SLSReleaseWindow(dinky_connection(), border);
 }
 
-// JankyBorders get_front_window: the front app's first suitable window on a current Space.
+// Accessibility identifies the key window; stacking order also includes always-on-top windows.
+static uint32_t focused_window_attribute(AXUIElementRef app, CFStringRef attribute)
+{
+    CFTypeRef value = NULL;
+    AXError error = AXUIElementCopyAttributeValue(app, attribute, &value);
+    uint32_t window = 0;
+    if (error == kAXErrorSuccess && value && CFGetTypeID(value) == AXUIElementGetTypeID()) {
+        _AXUIElementGetWindow((AXUIElementRef)value, &window);
+    }
+    if (value) CFRelease(value);
+    return window;
+}
+
+// The front app's actual focused document window on a current Space, with a normal-level fallback.
 uint32_t dinky_border_focused_window(void)
 {
     int owner = dinky_front_connection();
@@ -172,22 +189,38 @@ uint32_t dinky_border_focused_window(void)
     CFArrayRef windows = SLSCopyWindowsWithOptionsAndTags(cid, owner, (__bridge CFArrayRef)spaces, 0x2, &set_tags, &clear_tags);
     if (!windows) return 0;
 
+    NSRunningApplication *app = NSWorkspace.sharedWorkspace.frontmostApplication;
+    uint32_t key_window = 0;
+    uint32_t main_window = 0;
+    if (app) {
+        AXUIElementRef element = AXUIElementCreateApplication(app.processIdentifier);
+        AXUIElementSetMessagingTimeout(element, 0.05);
+        key_window = focused_window_attribute(element, kAXFocusedWindowAttribute);
+        main_window = focused_window_attribute(element, kAXMainWindowAttribute);
+        CFRelease(element);
+    }
+
     uint32_t focused = 0;
+    uint32_t main_candidate = 0;
+    uint32_t fallback = 0;
     int count = (int)CFArrayGetCount(windows);
     if (count) {
         CFTypeRef query = SLSWindowQueryWindows(cid, windows, count);
         CFTypeRef iterator = query ? SLSWindowQueryResultCopyWindows(query) : NULL;
 
-        // The iterator yields windows in the input array's order, so the first match is the
-        // frontmost. JankyBorders get_front_window relies on the same.
+        // Validate AX IDs against visible document windows, so an off-Space key window is not followed.
         while (iterator && SLSWindowIteratorAdvance(iterator)) {
             uint32_t wid = SLSWindowIteratorGetWindowID(iterator);
             uint32_t parent = SLSWindowIteratorGetParentID(iterator);
             uint64_t tags = SLSWindowIteratorGetTags(iterator);
             uint64_t attributes = SLSWindowIteratorGetAttributes(iterator);
             if (dinky_is_document_kind(parent, tags) && dinky_is_visible(attributes, tags)) {
-                focused = wid;
-                break;
+                if (wid == key_window) {
+                    focused = wid;
+                    break;
+                }
+                if (wid == main_window) main_candidate = wid;
+                if (!fallback && SLSWindowIteratorGetLevel(iterator) == 0) fallback = wid;
             }
         }
 
@@ -195,5 +228,7 @@ uint32_t dinky_border_focused_window(void)
         if (query) CFRelease(query);
     }
     CFRelease(windows);
-    return focused;
+    if (focused) return focused;
+    if (main_candidate) return main_candidate;
+    return fallback;
 }
