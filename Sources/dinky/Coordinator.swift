@@ -46,6 +46,7 @@ final class Coordinator {
     lazy var placeholders = DragPlaceholders()
     /// Called when the focused window changes.
     var onFocusChange: (() -> Void)?
+    var appFocusHistory = AppFocusHistory<pid_t, Window.Identity>()
     var focusHistory = FocusHistory<Window.Identity>()
     var focusedSpaces: [WindowID: UInt64] = [:]
     private var lastFocused: WindowID = 0
@@ -237,6 +238,7 @@ final class Coordinator {
 
     private func forget(_ window: Window) {
         let id = window.id
+        appFocusHistory.forget(window.identity)
         focusHistory.forget(window.identity)
         focusedSpaces[id] = nil
         attempts[id] = nil
@@ -267,6 +269,7 @@ final class Coordinator {
         focusing = nil
         if !SpaceSwitcher.shared.switching, let window = model.windows[id], window.isDocument,
            !window.isMinimized, isVisible(window.spaceID) {
+            appFocusHistory.observe(window.identity, for: window.pid)
             focusHistory.observe(window.identity)
             focusedSpaces[id] = window.spaceID
         }

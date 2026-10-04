@@ -5,16 +5,13 @@ import DinkyPrivate
 // "switch to a Space with open windows" setting is off. Only activations the user asked for are followed.
 // macOS also activates apps on its own, and chasing those throws the user off the Space they are on:
 // - Arriving on a Space activates whatever is there (Finder on an empty one). The first activation within
-//   `arrivalWindow` of a Space change is that one.
+//   `arrivalWindow` of a Space change is ignored unless fresh keyboard or mouse input arrived.
 // - When the active app quits, hides or loses its last window on the current Space, macOS activates another
 //   app. An activation within `goneWindow` of the previous app going away is that one.
-// - Opening a document activates the app before its new window exists. An app with no window on the
-//   current Space gets `windowGrace` for one to appear there before it is followed.
 
 private let ms: UInt64 = 1_000_000
 private let arrivalWindow = 300 * ms
 private let goneWindow = 300 * ms
-private let windowGrace = 250 * ms
 
 // The last Space seen on each display, updated whenever the display model changes and checked again on every
 // activation, since the model may not have caught up with a swipe posted by another process yet.
@@ -22,14 +19,15 @@ private var lastSeenSpaceIDs: [String: UInt64] = [:]
 private var lastSpaceChangeAt: UInt64 = 0
 /// No activation has arrived since the last Space change.
 private var arrivalPending = false
+private var arrivalInput: [UInt64] = []
 /// The app that last quit, hid or lost a window, and when.
 private var lastGone: (pid: pid_t, at: UInt64) = (0, 0)
 private var activePID = NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0
-/// Counts activations, so a follow waiting for a window knows when a newer activation replaced it.
-private var activations = 0
 /// The last few follows, to notice a loop: dinky and macOS chasing each other's activations between two
 /// Spaces. `loopFollows` follows within `loopWindow` pause following for `loopPause`, logged with the trail.
 private var recentFollows: [(at: UInt64, text: String)] = []
+private var followInput: [UInt64] = []
+private var requestedApp: pid_t = 0
 private var pausedUntil: UInt64 = 0
 private let loopFollows = 4
 private let loopWindow = 3_000 * ms
@@ -55,6 +53,7 @@ func noteOwnSwitch(to target: UInt64, on uuid: String) {
 private func spaceChanged() {
     lastSpaceChangeAt = uptime()
     arrivalPending = true
+    arrivalInput = inputCounts()
 }
 
 func installActivationFollower() {
@@ -71,9 +70,12 @@ func installActivationFollower() {
         guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
         let previous = activePID
         activePID = app.processIdentifier
-        activations += 1
         let name = app.localizedName ?? "?"
         guard AppState.shared.enabled, AppState.shared.config.followAppActivation else { return }
+        if inputCounts() != followInput {
+            pausedUntil = 0
+            recentFollows = []
+        }
         guard uptime() >= pausedUntil else { return log("activate \(name): not followed, following is paused") }
         guard !isArrivalActivation() else { return log("activate \(name): not followed, macOS activated it on arrival") }
         activated(app.processIdentifier, name: name, previous: previous)
@@ -96,32 +98,33 @@ private func isArrivalActivation() -> Bool {
     AppState.shared.displays.reconcile()
     noteCurrentSpace()
     defer { arrivalPending = false }
-    return arrivalPending && uptime() - lastSpaceChangeAt < arrivalWindow
+    return arrivalPending && inputCounts() == arrivalInput && uptime() - lastSpaceChangeAt < arrivalWindow
 }
 
-// Stays if the app has a window on the focused display's current Space: then Cmd-Tab brings that window
-// forward. Otherwise waits for one to appear there, then follows the app unless the activation was macOS
-// replacing an app that went away, or something else happened meanwhile.
+// Stays if the app has a window on the focused display's current Space; otherwise follows immediately.
 private func activated(_ pid: pid_t, name: String, previous: pid_t) {
+    requestedApp = pid
     guard let here = AppState.shared.displays.focusedDisplay()?.currentSpaceID else {
         return log("activate \(name): not followed, no focused display")
     }
-    guard !windowSpaces(of: pid).contains(here) else { return log("activate \(name): stayed, it has a window here") }
-    let activatedAt = uptime()
-    let activation = activations
-    DispatchQueue.main.asyncAfter(deadline: .now() + .nanoseconds(Int(windowGrace))) {
-        if activation != activations {
-            log("activate \(name): not followed, another app was activated")
-        } else if lastSpaceChangeAt >= activatedAt {
-            log("activate \(name): not followed, the Space changed meanwhile")
-        } else if windowSpaces(of: pid).contains(here) {
-            log("activate \(name): stayed, its new window opened here")
-        } else if lastGone.pid == previous, lastGone.at + goneWindow > activatedAt, !hasWindowOnScreen(previous) {
-            log("activate \(name): not followed, macOS replaced the app that went away")
-        } else {
-            follow(pid, name: name)
+    if windowSpaces(of: pid).contains(here) {
+        // A new activation can reverse a switch still in flight. Replace its destination too.
+        let model = AppState.shared.displays
+        if let display = model.display(containingSpace: here), targetSpaceID(on: display) != here,
+           let id = normalWindows(of: pid, [.optionAll]).first(where: { dinky_window_space_id($0) == here }),
+           let identity = AppState.shared.coordinator?.model.windows[id]?.identity {
+            switchSpace(toSpaceID: here, on: display) {
+                guard requestedApp == pid, AppState.shared.coordinator?.model.windows[id]?.identity == identity else { return }
+                AppState.shared.coordinator?.focus(id)
+                AppState.shared.coordinator?.syncFocus()
+            }
         }
+        return log("activate \(name): stayed, it has a window here")
     }
+    guard lastGone.pid != previous || lastGone.at + goneWindow <= uptime() || hasWindowOnScreen(previous) else {
+        return log("activate \(name): not followed, macOS replaced the app that went away")
+    }
+    follow(pid, name: name)
 }
 
 private func log(_ message: String) {
@@ -129,9 +132,19 @@ private func log(_ message: String) {
     fflush(stdout)
 }
 
-// Remembers a follow, and pauses following when they come too fast to be the user's doing.
+// New input separates deliberate app switches from repeated automatic activations.
+private func inputCounts() -> [UInt64] {
+    [.keyDown, .leftMouseDown, .rightMouseDown, .otherMouseDown].map {
+        UInt64(CGEventSource.counterForEventType(.combinedSessionState, eventType: $0))
+    }
+}
+
+// Only follows without intervening input contribute to the loop guard.
 private func noteFollow(_ text: String) {
     let now = uptime()
+    let input = inputCounts()
+    if input != followInput { recentFollows = [] }
+    followInput = input
     recentFollows = recentFollows.filter { now - $0.at < loopWindow } + [(now, text)]
     guard recentFollows.count >= loopFollows else { return }
     pausedUntil = now + loopPause
@@ -163,28 +176,44 @@ private func normalWindows(of pid: pid_t, _ options: CGWindowListOption) -> [UIn
     }
 }
 
-// Switches to the Space of the app's main window, the one Cmd-Tab brings forward, or else of its frontmost one.
-// The window server's order across Spaces is not the order the app last used its windows in, so on its own it can
-// pick another Space than the window the app makes key. Once there, brings the window forward.
+// Prefer confirmed focus history, then the app's AX main window, then stacking order.
 private func follow(_ pid: pid_t, name: String) {
-    let model = AppState.shared.displays
+    let state = AppState.shared
+    let model = state.displays
     guard uptime() >= pausedUntil else { return log("activate \(name): not followed, following is paused") }
     let windows = normalWindows(of: pid, [.optionAll])
+    var candidates = windows
     let main = mainWindowID(of: pid)
-    let candidates = windows.contains(main) ? [main] + windows : windows
-    guard let (window, space, display) = candidates.lazy.compactMap({ wid -> (UInt32, UInt64, Display)? in
-        let sid = dinky_window_space_id(wid)
-        return model.display(containingSpace: sid).map { (wid, sid, $0) }
-    }).first else {
-        return log("activate \(name): not followed, no display has its windows' Spaces \(windowSpaces(of: pid))")
+    if windows.contains(main) {
+        candidates.removeAll { $0 == main }
+        candidates.insert(main, at: 0)
     }
-    guard space != display.currentSpaceID,
-          switchSpace(toSpaceID: space, on: display, landed: { bringForward(window, of: pid, name: name) }) else {
+    if let identity = state.coordinator?.appFocusHistory.lastFocused(for: pid),
+       state.coordinator?.model.windows[identity.id]?.identity == identity, windows.contains(identity.id) {
+        candidates.removeAll { $0 == identity.id }
+        candidates.insert(identity.id, at: 0)
+    }
+    guard let (id, space, display) = candidates.lazy.compactMap({ id -> (UInt32, UInt64, Display)? in
+        let space = dinky_window_space_id(id)
+        guard let display = model.display(containingSpace: space) else { return nil }
+        return (id, space, display)
+    }).first else {
+        return log("activate \(name): not followed, no window has an available Space")
+    }
+    let identity = state.coordinator?.model.windows[id]?.identity
+    let arrive = {
+        guard requestedApp == pid, let identity, state.coordinator?.model.windows[id]?.identity == identity else { return }
+        bringForward(id, of: pid, name: name)
+        state.coordinator?.syncFocus()
+    }
+    guard space != display.currentSpaceID else {
+        arrive()
         return log("activate \(name): not followed, already on Space \(space)")
     }
-    let numbers = AppState.shared.numbers
-    let text = "activate \(name): followed workspace \(numbers.label(of: display.currentSpaceID)) -> \(numbers.label(of: space))"
-        + " on \(display.name.isEmpty ? "display \(display.id)" : display.name)"
+    let from = state.numbers.label(of: display.currentSpaceID)
+    guard switchSpace(toSpaceID: space, on: display, landed: arrive) else { return }
+    let text = "activate \(name): followed workspace \(from) -> \(state.numbers.label(of: space))"
+        + " on \(display.name.isEmpty ? "display \(display.id)" : display.name), window \(id)"
     log(text)
     noteFollow(text)
 }
