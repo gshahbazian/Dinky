@@ -81,6 +81,10 @@ struct SchemaTests {
         fullscreen-width = 0.9
         lone-window-width = 0.8
 
+        [single-group]
+        max-width = 1400
+
+
         [accordion]
         padding = 20
         orientation = 'keep'

@@ -87,6 +87,17 @@
     },
     "fullscreen-width": { "type": "number", "minimum": 0.1, "maximum": 1, "default": 1, "description": "The share of the width, inside the outer gaps, that a fullscreen window takes, centred. Lone windows use it unless lone-window-width is set. Display and workspace tables override it." },
     "lone-window-width": { "type": "number", "minimum": 0.1, "maximum": 1, "description": "A lone window's centred share of the width inside the outer gaps. Workspace tables override display tables, which override this value. If unset everywhere, uses the resolved fullscreen-width." },
+    "single-group": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max-width": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Center a lone tiled window or accordion group at this maximum width in points. Fullscreen and fixed grids are unaffected."
+        }
+      }
+    },
     "scrolling": {
       "type": "object",
       "additionalProperties": false,
