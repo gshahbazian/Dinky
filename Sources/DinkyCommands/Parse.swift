@@ -45,6 +45,8 @@ extension Command {
             return one.flatMap(workspaceTarget).map { .workspace($0) }
         case "workspace-back-and-forth":
             return none ? .workspaceBackAndForth : nil
+        case "focus-back-and-forth":
+            return none ? .focusBackAndForth : nil
         case "move-window-to-workspace":
             let (rest, follow) = followFlag(args)
             guard rest.count == 1, let target = workspaceTarget(rest[0]) else { return nil }
