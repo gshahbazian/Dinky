@@ -50,6 +50,8 @@ final class Coordinator {
     /// Newly shown windows at the exact frame of a tile of their app, held out of the trees for a moment in case
     /// they are a tab switch: by newcomer, the tile's window. See Tabs.swift.
     var heldTabs: [WindowID: WindowID] = [:]
+    /// Tiles briefly retained when the old tab disappears before its replacement arrives.
+    var departingTabs: [WindowID: DepartingTab] = [:]
     /// Newcomers held once and not confirmed as tabs. They are tiled like any window from then on.
     var notTabs: Set<WindowID> = []
     /// New windows not yet classified, and the display that had focus when they first showed. See Adoption.swift.
@@ -151,7 +153,7 @@ final class Coordinator {
         }
         borders?.handle(event)
         if let window = event.window {
-            event.change == .removed ? forget(window.id) : track(window)
+            event.change == .removed ? forget(window.id, departing: window) : track(window)
             if [.windowMove, .windowResize].contains(event.kind) {
                 noteFrameChange(of: window.id)
                 recoverFrame(of: window.id)
@@ -360,8 +362,20 @@ final class Coordinator {
             if !classification.runsRules, adopt(window) { return }
         }
         guard !adopting.contains(window.id), !placements[window.id]!.floating else { return }
+        if let reserved = departingTabs[window.id], window.isNormal, !window.isMinimized,
+           window.spaceID == reserved.space {
+            departingTabs[window.id] = nil
+            placements[window.id]!.space = reserved.space
+            return
+        }
         let old = placements[window.id]!.space
         if let old, window.isMinimized || !window.isOrderedIn, takeOverTile(of: window.id, in: old) {
+            placements[window.id]!.space = nil
+            return
+        }
+        if let old, window.isMinimized || !window.isOrderedIn,
+           window.spaceID == 0 || window.spaceID == old {
+            reserveTab(window, in: old)
             placements[window.id]!.space = nil
             return
         }
@@ -374,7 +388,7 @@ final class Coordinator {
         placements[window.id]!.space = new
     }
 
-    func forget(_ id: WindowID) {
+    func forget(_ id: WindowID, departing window: Window? = nil) {
         windowIdentifiers[id] = nil
         attempts[id] = nil
         adoptTargets[id] = nil
@@ -386,7 +400,11 @@ final class Coordinator {
         notTabs.remove(id)
         guard let placement = placements.removeValue(forKey: id), let space = placement.space,
               !takeOverTile(of: id, in: space) else { return }
-        edit(space) { $0.remove(id) }
+        if let window {
+            reserveTab(window, in: space)
+        } else {
+            edit(space) { $0.remove(id) }
+        }
     }
 
     /// The front app's frontmost document window on a current Space.
