@@ -27,6 +27,10 @@ extension Config {
     # [workspace.2.display.built-in]   # its settings while on the laptop screen
     # layout = 'accordion'
 
+    # Cap and center a lone tiled window or accordion group on every display (points).
+    # [single-group]
+    # max-width = 1400
+
     [accordion]
     padding = 30                    # points the neighbours peek out by
     orientation = 'auto'            # auto: run along the container's longer side | keep

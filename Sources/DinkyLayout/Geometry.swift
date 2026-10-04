@@ -166,3 +166,19 @@ extension Node {
         }
     }
 }
+
+extension Node {
+    /// Minimum width of a single group, including horizontal accordion peeks.
+    func groupMinimumWidth(in area: CGRect, padding: CGFloat, minimums: [WindowID: CGSize]) -> CGFloat {
+        switch self {
+        case .window(let id): return minimums[id]?.width ?? 0
+        case .container(let c):
+            let peek = c.mode == .accordion && c.axis(in: area) == .horizontal
+                ? padding * CGFloat(min(max(c.children.count - 1, 0), 2)) : 0
+            var inner = area
+            inner.size.width = max(0, area.width - peek)
+            let child = c.children.map { $0.groupMinimumWidth(in: inner, padding: padding, minimums: minimums) }.max() ?? 0
+            return child + peek
+        }
+    }
+}

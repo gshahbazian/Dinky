@@ -17,6 +17,7 @@ public struct Workspace: Equatable, Sendable {
     /// The Space's visible rect, top-left origin.
     public var bounds: CGRect
     public var gaps: Gaps
+    public var singleGroupMaxWidth: CGFloat?
     public var accordionPadding: CGFloat
     /// Whether a container switching to accordion follows its longer side (`auto`), unless a `layout` command
     /// chose its orientation.
@@ -401,7 +402,22 @@ public struct Workspace: Equatable, Sendable {
     func tiledLayout() -> Layout {
         if isScrolling { return stripLayout() }
         var result = Layout()
-        root.layout(in: gaps.inset(bounds), gaps: gaps, padding: accordionPadding, minimums: minimumSizes, into: &result)
+        var area = gaps.inset(bounds)
+        if case .dwindle = algorithm, Node.container(root).isSingleGroup, let cap = singleGroupMaxWidth {
+            let available = area.width
+            var width = min(available, cap)
+            // Widen only when required; auto accordions may change axis as the group grows.
+            while width < available {
+                let proposed = CGRect(x: area.minX, y: area.minY, width: width, height: area.height)
+                let minimum = Node.container(root).groupMinimumWidth(in: proposed, padding: accordionPadding, minimums: minimumSizes)
+                let next = min(available, max(width, minimum))
+                guard next > width else { break }
+                width = next
+            }
+            area.origin.x += (area.width - width) / 2
+            area.size.width = width
+        }
+        root.layout(in: area, gaps: gaps, padding: accordionPadding, minimums: minimumSizes, into: &result)
         return result
     }
 
