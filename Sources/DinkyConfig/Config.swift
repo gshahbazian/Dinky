@@ -38,6 +38,7 @@ public struct Config: Equatable {
     public var borders = Borders()
     public var focusFollowsMouse = FocusFollowsMouse()
     public var swipe = Swipe()
+    public var mouseFollowsFocus = false
     public var animations = Animations()
     public var drag = Drag()
     public var modifiers = ModifierSides()
@@ -140,6 +141,10 @@ public struct Config: Equatable {
         borders = try t.table("borders").map(Borders.init) ?? borders
         focusFollowsMouse = try t.table("focus-follows-mouse").map(FocusFollowsMouse.init) ?? focusFollowsMouse
         swipe = try t.table("swipe").map(Swipe.init) ?? swipe
+        if let mouse = try t.table("mouse-follows-focus") {
+            mouseFollowsFocus = try mouse.bool("enabled") ?? false
+            try mouse.done()
+        }
         animations = try t.table("animations").map(Animations.init) ?? animations
         drag = try t.table("drag").map(Drag.init) ?? drag
         modifiers = try t.table("modifiers").map(ModifierSides.init) ?? modifiers
