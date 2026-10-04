@@ -295,3 +295,19 @@ struct ReplaceTests {
         #expect(shape(ws.root) == "h[1 2]")
     }
 }
+
+
+@Test func tabReplacementPreservesLeftTileAndRatio() {
+    var ws = workspace(2)
+    ws.focus(1)
+    _ = ws.resize(by: 100, along: .horizontal)
+    let before = ws.layout()
+    ws.replace(1, with: 3)
+    #expect(ws.windows == [3, 2])
+    #expect(ws.layout().frames[3] == before.frames[1])
+    #expect(ws.layout().frames[2] == before.frames[2])
+    #expect(ws.focused == 3)
+    ws.replace(3, with: 1)
+    #expect(ws.windows == [1, 2])
+    #expect(ws.layout().frames[1] == before.frames[1])
+}
