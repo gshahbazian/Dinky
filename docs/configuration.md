@@ -213,6 +213,16 @@ its own.
 | `side` | `'left'` | The side the master takes: `'left'` or `'right'`. The stack goes on the other. Hyprland calls it `orientation`. |
 
 </div>
+## `[single-group]`
+
+Set `max-width = 1400` to cap a lone tiled window or accordion group's width in macOS points and
+center it horizontally within the available area after outer gaps. Height is
+unchanged. Omit the setting to use the full width. This applies on every display;
+smaller displays use their available width. Floating windows do not count, and
+native tabs share one tile. An accordion stack counts as one group, including its
+peeking edges. A split inside a stack, or a separate second group, restores normal tiling.
+Fullscreen bypasses the cap, and fixed layouts keep their reserved cells.
+An app's learned minimum width can exceed the cap to keep its contents usable.
 
 ## `[accordion]`
 
