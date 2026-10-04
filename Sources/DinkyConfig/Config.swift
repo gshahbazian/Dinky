@@ -25,6 +25,7 @@ public struct Config: Equatable {
     public var accordion = Accordion()
     public var scrolling = Scrolling()
     public var gaps = Gaps()
+    public var singleGroupMaxWidth: Int?
     /// `[display.<pattern>]` overrides, in file order.
     public var displays: [DisplayOverride] = []
     public var borders = Borders()
@@ -110,6 +111,13 @@ public struct Config: Equatable {
         floatWindowsWithoutFullscreen = try t.bool("float-windows-without-fullscreen") ?? floatWindowsWithoutFullscreen
         accordion = try t.table("accordion").map(Accordion.init) ?? accordion
         scrolling = try t.table("scrolling").map(Scrolling.init) ?? scrolling
+        if let single = try t.table("single-group") {
+            singleGroupMaxWidth = try single.int("max-width")
+            if let width = singleGroupMaxWidth, width <= 0 {
+                throw ConfigError(path: single.path("max-width"), "must be greater than zero")
+            }
+            try single.done()
+        }
         gaps = try t.table("gaps").map { try gaps.applying(GapsPatch($0)) } ?? gaps
         if let displayTable = try t.table("display") {
             for pattern in displayTable.keys {
