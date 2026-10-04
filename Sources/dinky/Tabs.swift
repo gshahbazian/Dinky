@@ -1,12 +1,28 @@
 import Foundation
 import DinkyLayout
 
+struct DepartingTab {
+    let window: Window
+    let space: UInt64
+    let expires: Date
+}
+
 // Native tabs: a newly shown window at the exact frame of a tile of its app is held out of the trees until
 // it turns out to be the next tab of that tile (the tile's window is ordered out) or a window of its own.
 extension Coordinator {
     /// Holds a newly shown window out of the tree if it may be the next tab of a tile of its app, and has not been
     /// held before. `settleTab` tiles it after 250 ms if the tile's window is still there.
     func holdAsTab(_ window: Window, in key: UInt64) -> Bool {
+        if let old = departingTabs.first(where: { id, reserved in
+            id != window.id && reserved.space == key && reserved.window.pid == window.pid
+                && reserved.expires > Date() && reserved.window.frame.isClose(to: window.frame, within: 1)
+                && workspaces[key]?.contains(id) == true
+        }) {
+            departingTabs[old.key] = nil
+            edit(key) { $0.replace(old.key, with: window.id) }
+            placements[window.id]!.space = key
+            return true
+        }
         guard !notTabs.contains(window.id), let tab = tab(replacedBy: window, in: key) else { return false }
         heldTabs[window.id] = tab
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in self?.settleTab(window.id) }
@@ -33,6 +49,19 @@ extension Coordinator {
         edit(key) { $0.replace(id, with: newcomer) }
         placements[newcomer]!.space = key
         return true
+    }
+
+    /// Preserve the old tile long enough to recognize the hide-before-create event order.
+    func reserveTab(_ window: Window, in key: UInt64) {
+        guard departingTabs[window.id] == nil else { return }
+        let expires = Date().addingTimeInterval(0.25)
+        departingTabs[window.id] = DepartingTab(window: window, space: key, expires: expires)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            guard let self, self.departingTabs[window.id]?.expires == expires else { return }
+            self.departingTabs[window.id] = nil
+            self.edit(key) { $0.remove(window.id) }
+            self.flush()
+        }
     }
 
     /// The tile's window stayed: the held newcomer was a window of its own, so it is tiled like any other.
