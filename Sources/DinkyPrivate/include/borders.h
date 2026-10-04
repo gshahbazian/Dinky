@@ -59,8 +59,8 @@ void dinky_border_destroy(DinkyBorder *border);
 // Whether `windowID` is one of the border's edge windows.
 bool dinky_border_owns(const DinkyBorder *border, uint32_t windowID);
 
-// The front app's frontmost document window on a visible Space, 0 if none.
-// JankyBorders get_front_window.
+// The front app's AX focused or main document window on a visible Space, 0 if none.
+// If AX is unavailable, use the frontmost normal-level document window.
 uint32_t dinky_border_focused_window(void);
 
 NS_ASSUME_NONNULL_END
