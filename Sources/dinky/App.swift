@@ -33,7 +33,7 @@ final class DinkyApp: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationDidFinishLaunching(_ note: Notification) {
         AppState.shared.loadConfig()
         socket = SocketServer(handle: handleCommand)
-        // `kill` and logout quit through NSApplication, so windows are restored on the way out.
+        // `kill` and logout quit through NSApplication, so the recovery journal is cleared.
         for sig in [SIGTERM, SIGINT] {
             signal(sig, SIG_IGN)
             let source = DispatchSource.makeSignalSource(signal: sig, queue: .main)

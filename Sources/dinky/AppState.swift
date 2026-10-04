@@ -30,7 +30,7 @@ final class AppState {
     let numbers = WorkspaceNumbers()
     /// Tiling and borders, started by the app once Accessibility is granted.
     private(set) var coordinator: Coordinator?
-    /// The journal of original frames that disable, quit and `dinky recover` restore.
+    /// The journal of original frames that disable and `dinky recover` restore.
     let recovery = Recovery()
     private let hooks = Hooks()
     private let hoverFocus = HoverFocus()
@@ -70,7 +70,7 @@ final class AppState {
 
     /// The one enable transition. Off stops tiling and puts every window back where it was before dinky
     /// touched it, and returns the restore's summary. This is the emergency path: `dinky enable off`, the
-    /// menu's Enabled item, `dinky recover` and quitting all come through here.
+    /// menu's Enabled item and `dinky recover` all come through here.
     @discardableResult
     func setEnabled(_ on: Bool) -> String {
         if on { recovery.resume() }
@@ -86,9 +86,11 @@ final class AppState {
         return .ok(setEnabled(false) + "; dinky is disabled, `dinky enable on` tiles again")
     }
 
-    /// Quitting stops tiling and puts every window back.
+    /// Leave windows in place and discard the completed session's recovery journal.
     func quit() {
-        setEnabled(false)
+        enabled = false
+        propagateEnabled()
+        recovery.finish()
     }
 
     private func apply(_ result: Result<Config, ConfigError>) {
