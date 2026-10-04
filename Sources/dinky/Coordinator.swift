@@ -269,6 +269,7 @@ final class Coordinator {
     /// are reordered or displays come and go.
     private func configureWorkspaces() {
         for key in workspaces.keys {
+            workspaces[key]!.singleGroupMaxWidth = config.singleGroupMaxWidth.map { CGFloat($0) }
             workspaces[key]!.accordionPadding = CGFloat(config.accordion.padding)
             workspaces[key]!.autoOrientAccordions = config.accordion.orientation == .auto
             workspaces[key]!.columnWidth = config.scrolling.columnWidth
@@ -394,6 +395,7 @@ final class Coordinator {
             workspaces[key]!.masterSize = config.master.size
             workspaces[key]!.setMasterSide(config.master.layoutSide)
             workspaces[key]!.walls = walls(of: display)
+            workspaces[key]!.singleGroupMaxWidth = config.singleGroupMaxWidth.map { CGFloat($0) }
         }
         return key
     }
