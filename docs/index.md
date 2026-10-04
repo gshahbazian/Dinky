@@ -104,6 +104,12 @@ defaults write com.apple.dock workspaces-auto-swoosh -bool true && killall Dock
   minimum size; Clear Saved Minimum Sizes in the menu forgets them.
 - macOS cannot focus a window on another Space, so dinky switches first.
 
+## Quitting and recovery
+
+Quitting dinky leaves windows at their current sizes and on their current Spaces.
+Disabling it with `dinky enable off` restores their original sizes and Spaces.
+After a crash, `dinky recover` can restore windows from the saved recovery journal.
+
 ## Credits
 
 - [yabai](https://github.com/asmvik/yabai) (MIT): SkyLight signatures, window
