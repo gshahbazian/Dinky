@@ -6,6 +6,7 @@ import DinkyLayout
 public enum Command: Equatable, Sendable {
     case workspace(WorkspaceTarget)
     case workspaceBackAndForth
+    case focusBackAndForth
     case moveWindowToWorkspace(WorkspaceTarget, follow: Bool)
     case moveWindowToDisplay(DisplayTarget, follow: Bool)
     /// Focus the neighbour in a direction. `boundaries` says where the search stops, `action` what happens there.
@@ -123,6 +124,21 @@ extension Direction {
         case "up": self = .up
         case "down": self = .down
         default: return nil
+        }
+    }
+}
+
+
+extension Command {
+    /// Only explicit navigation requests move the pointer; window rules never do.
+    public var followsMouse: Bool {
+        switch self {
+        case .focus, .focusBackAndForth, .focusMonitor, .focusMonitorNumber, .workspace, .workspaceBackAndForth:
+            return true
+        case .moveWindowToWorkspace(_, let follow), .moveWindowToDisplay(_, let follow):
+            return follow
+        default:
+            return false
         }
     }
 }

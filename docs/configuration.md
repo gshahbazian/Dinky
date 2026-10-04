@@ -120,6 +120,13 @@ gaps.outer.top = 44
 | `order` | `'below'` | `'above'` draws a click-through ring over the window. |
 | `exclude-apps` | `[]` | Bundle IDs that get no border. |
 
+## `[mouse-follows-focus]`
+
+`enabled = false` by default. When enabled, explicit focus, workspace and move-with-follow
+commands center the pointer only when it is outside the destination window (or display
+for an empty workspace). Clicks, dragging, Cmd-Tab and native tab switching do not move
+it. Pointer input cancels a pending move; Space switches and animations finish first.
+
 ## `[focus-follows-mouse]`
 
 | Key | Default | |

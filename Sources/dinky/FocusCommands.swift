@@ -6,15 +6,23 @@ import DinkyPrivate
 // `focus` with AeroSpace's boundaries, and `focus-monitor`. Display geometry comes from the display model;
 // a display is entered at the window snapped to the edge focus comes in by.
 extension Dispatcher {
-    /// Focuses the neighbour in the focused window's tree. At the workspace edge, `all-monitors-outer-frame`
-    /// goes on to the display in that direction; at the last edge `action` decides. A floating window, which
-    /// has no tree, looks for the nearest window on screen instead.
+    /// Tiled and floating windows share the same spatial navigation and wrap behavior.
     static func focus(_ direction: Direction, boundaries: FocusBoundaries, action: BoundariesAction) -> Reply {
         guard let coordinator = AppState.shared.coordinator,
-              let found = coordinator.command({ $0.focus(direction) ? $0.focused : nil }) else {
-            return focusOnScreen(direction)
+              let front = coordinator.model.windows[coordinator.focusedWindow] else { return focusOnScreen(direction) }
+        let windows = coordinator.model.windows.values.filter {
+            $0.spaceID == front.spaceID && $0.isNormal && !$0.isMinimized
         }
-        if let id = found { return focus(window: id) }
+        var frames = Dictionary(uniqueKeysWithValues: windows.map { ($0.id, $0.frame) })
+        if let display = AppState.shared.displays.display(containingSpace: front.spaceID),
+           let workspace = coordinator.workspace(on: display) {
+            frames = workspace.directionalFrames(frames, direction: direction)
+        }
+        let from = frames[front.id] ?? front.frame
+        let candidates = frames.filter { $0.key != front.id }.map { ($0.key, $0.value) }
+        if let id = directionalWindow(from: from, candidates: candidates, direction: direction) {
+            return focus(window: id)
+        }
         let model = AppState.shared.displays
         if boundaries == .allMonitorsOuterFrame, let from = model.display(ofWindow: coordinator.focusedWindow) {
             let line = displays(inLineWith: from, direction.orientation, model.displays)
@@ -28,11 +36,42 @@ extension Dispatcher {
         case .fail:
             return .error("no window \(direction)")
         case .wrapAroundTheWorkspace:
-            guard let id = coordinator.command({ $0.focus(direction, wrapping: true) ? $0.focused : nil }) ?? nil else {
+            guard let id = wrappedDirectionalWindow(from: from, candidates: candidates, direction: direction) else {
                 return .ok("no window to wrap around to")
             }
             return focus(window: id)
         }
+    }
+
+    static func focusBackAndForth() -> Reply {
+        let state = AppState.shared
+        guard let coordinator = state.coordinator else { return .error("tiling is not running") }
+        coordinator.syncFocus()
+        guard let previous = coordinator.focusHistory.previous,
+              let window = coordinator.model.windows[previous.id], window.identity == previous else {
+            return .error("no previous focused window")
+        }
+        let liveSpace = dinky_window_space_id(window.id)
+        let space = liveSpace == 0 ? coordinator.focusedSpaces[window.id] : liveSpace
+        state.displays.reconcile()
+        guard let space, let display = state.displays.display(containingSpace: space) else {
+            return .error("previous window has no available Space")
+        }
+        let history = coordinator.focusHistory
+        let arrive = {
+            guard coordinator.model.windows[previous.id]?.identity == previous else { return }
+            coordinator.focusHistory = history
+            coordinator.focus(previous.id)
+            MouseFollowFocus.shared.focusedByCommand(previous.id)
+            coordinator.syncFocus()
+        }
+        MouseFollowFocus.shared.focusedByCommand(previous.id)
+        if display.currentSpaceID == space && targetSpaceID(on: display) == space {
+            arrive()
+        } else if !switchSpace(toSpaceID: space, on: display, landed: arrive) {
+            return .error("switch to previous window's Space failed")
+        }
+        return .ok("focused previous window \(previous.id)")
     }
 
     /// Focuses a display's most recently focused window, or the display itself when it has none.
@@ -78,6 +117,7 @@ extension Dispatcher {
             return .error("window \(id) is gone")
         }
         coordinator.focus(id)
+        MouseFollowFocus.shared.focusedByCommand(id)
         return .ok("focused window \(id) \(window.appName ?? "")")
     }
 
@@ -90,29 +130,31 @@ extension Dispatcher {
         }.sorted { horizontal ? $0.frame.minX < $1.frame.minX : $0.frame.minY < $1.frame.minY }
     }
 
-    /// The nearest window on the current Space whose centre lies in the direction, by distance between centres.
+    /// Navigate visible windows, entering from the opposite edge when the active app has no window.
     private static func focusOnScreen(_ direction: Direction) -> Reply {
         let model = AppState.shared.displays
         model.reconcile()
-        guard let main = model.displays.first(where: \.isMain) ?? model.displays.first else { return .error("no display") }
+        guard let main = model.focusedDisplay() else { return .error("no display") }
         let onSpace = Set(dinky_space_window_ids(main.currentSpaceID, false).map(\.uint32Value))
         let windows = windowList().filter { onSpace.contains($0.id) }
-        guard let front = windows.first(where: { $0.id == frontWindowID() }) else { return .error("no focused window") }
-        let from = CGPoint(x: front.frame.midX, y: front.frame.midY)
-        let candidates = windows.filter { w in
-            let dx = w.frame.midX - from.x, dy = w.frame.midY - from.y
-            switch direction {
-            case .left: return dx < 0 && abs(dx) >= abs(dy)
-            case .right: return dx > 0 && abs(dx) >= abs(dy)
-            case .up: return dy < 0 && abs(dy) >= abs(dx)
-            case .down: return dy > 0 && abs(dy) >= abs(dx)
-            }
+        var frames = Dictionary(uniqueKeysWithValues: windows.map { ($0.id, $0.frame) })
+        if let workspace = AppState.shared.coordinator?.workspace(on: main) {
+            frames = workspace.directionalFrames(frames, direction: direction)
         }
-        guard let next = candidates.min(by: { hypot($0.frame.midX - from.x, $0.frame.midY - from.y)
-                                              < hypot($1.frame.midX - from.x, $1.frame.midY - from.y) }) else {
+        let id: WindowID?
+        if let front = windows.first(where: { $0.id == frontWindowID() }) {
+            let candidates = frames.filter { $0.key != front.id }.map { ($0.key, $0.value) }
+            id = directionalWindow(from: frames[front.id] ?? front.frame, candidates: candidates, direction: direction)
+        } else {
+            let candidates = frames.map { ($0.key, $0.value) }
+            id = wrappedDirectionalWindow(from: main.visibleArea, candidates: candidates, direction: direction)
+        }
+        guard let id, let next = windows.first(where: { $0.id == id }) else {
             return .error("no window \(direction)")
         }
+        if AppState.shared.coordinator?.model.windows[id] != nil { return focus(window: id) }
         focusWindow(pid: next.pid, id: next.id)
+        MouseFollowFocus.shared.focusedByCommand(next.id)
         return .ok("focused window \(next.id) \(next.app)")
     }
 }

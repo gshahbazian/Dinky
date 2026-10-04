@@ -49,6 +49,9 @@ extension Config {
     order = 'below'                 # below | above (a click-through ring over the window)
     exclude-apps = []               # bundle IDs whose windows get no border
 
+    [mouse-follows-focus]
+    enabled = false                # lazy centering after focus/workspace commands only
+
     [focus-follows-mouse]
     enabled = false
     delay-ms = 100                  # how long the pointer rests on a window before it takes focus

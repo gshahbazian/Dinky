@@ -112,6 +112,17 @@
         }
       }
     },
+    "mouse-follows-focus": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Lazy pointer centering after explicit focus and workspace commands."
+        }
+      }
+    },
     "focus-follows-mouse": {
       "type": "object",
       "additionalProperties": false,
@@ -248,7 +259,7 @@
     },
     "command": {
       "type": "string",
-      "pattern": "^\\s*(workspace|workspace-back-and-forth|move-window-to-workspace|move-window-to-display|focus|focus-monitor|move|join-with|resize|layout|fullscreen|flatten-workspace-tree|balance-sizes|retile|clear-minimum-sizes|mode|reload-config|enable|list-workspaces|list-windows|list-monitors|list-displays|list-modes|debug-state|exec-and-forget)(\\s.*)?$",
+      "pattern": "^\\s*(workspace|workspace-back-and-forth|focus-back-and-forth|move-window-to-workspace|move-window-to-display|focus|focus-monitor|move|join-with|resize|layout|fullscreen|flatten-workspace-tree|balance-sizes|retile|clear-minimum-sizes|mode|reload-config|enable|list-workspaces|list-windows|list-monitors|list-displays|list-modes|debug-state|exec-and-forget)(\\s.*)?$",
       "description": "A dinky command, as `dinky help` lists them: `workspace 3`, `layout floating`, `exec-and-forget open -a Safari`."
     },
     "commands": {

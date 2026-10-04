@@ -114,6 +114,10 @@ final class AppState {
 
     /// Hands `enabled` to the parts that keep their own copy. The activation follower and hover focus read it
     /// when they decide.
+    func parkHoverAfterPointerMove() {
+        hoverFocus.parkAfterPointerMove()
+    }
+
     private func propagateEnabled() {
         hotkeys.enabled = enabled
         coordinator?.enabled = enabled

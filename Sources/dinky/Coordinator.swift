@@ -46,6 +46,8 @@ final class Coordinator {
     lazy var placeholders = DragPlaceholders()
     /// Called when the focused window changes.
     var onFocusChange: (() -> Void)?
+    var focusHistory = FocusHistory<Window.Identity>()
+    var focusedSpaces: [WindowID: UInt64] = [:]
     private var lastFocused: WindowID = 0
     /// A window dinky just focused, and until when focus reads that disagree are taken as stale.
     private var focusing: (id: WindowID, until: Date)?
@@ -234,6 +236,8 @@ final class Coordinator {
 
     private func forget(_ window: Window) {
         let id = window.id
+        focusHistory.forget(window.identity)
+        focusedSpaces[id] = nil
         attempts[id] = nil
         applier.forget(id)
         animator.forget(id)
@@ -256,15 +260,20 @@ final class Coordinator {
     }
 
     /// Follows focus into the trees, so new windows land beside the focused one and accordions show it.
-    private func syncFocus() {
+    func syncFocus() {
         let id = focusedWindow
+        if let focusing, focusing.id != id, Date() < focusing.until { return }
+        focusing = nil
+        if !SpaceSwitcher.shared.switching, let window = model.windows[id], window.isDocument,
+           !window.isMinimized, isVisible(window.spaceID) {
+            focusHistory.observe(window.identity)
+            focusedSpaces[id] = window.spaceID
+        }
         if id != lastFocused {
             lastFocused = id
             displays.focusOverride = nil
             onFocusChange?()
         }
-        if let focusing, focusing.id != id, Date() < focusing.until { return }
-        focusing = nil
         guard let key = placements[id]?.space, workspaces[key]?.focused != id else { return }
         edit(key) { $0.focus(id) }
     }
