@@ -2,12 +2,9 @@ import AppKit
 import DinkyLayout
 import DinkyPrivate
 
-// Restore on disable and quit, and crash recovery. Before dinky tiles a window, its original frame and
-// Space are journaled once and saved to disk, so a crash leaves them behind. Disabling or quitting puts
-// every journaled window back; one it could not put back for a passing reason stays journaled for the next
-// try, unless it is moved by hand meanwhile (see FailedRestores and RestoreProblem). After a crash, the next
-// launch keeps the entries whose windows still exist with the same owner and offers to restore them. Main
-// thread only.
+// Original frames and Spaces are journaled before tiling for disable and crash recovery. Failed restores
+// stay journaled for another try unless the window was moved by hand. Normal quit leaves windows in place
+// and clears the journal. After a crash, the next launch offers to restore surviving windows. Main thread only.
 final class Recovery {
     struct Entry: Codable {
         let id: UInt32
@@ -63,6 +60,14 @@ final class Recovery {
         for id in failed.ids where failed.movedByHand(id, now: position(of: id)) { entries[id] = nil }
         failed.clear()
         record()
+    }
+
+    /// Complete a normal session without changing any window's frame or Space.
+    func finish() {
+        recording = false
+        entries = [:]
+        carried = []
+        save()
     }
 
     /// Stops journaling, moves every journaled window back to its Space, writes its frame, and forgets the
