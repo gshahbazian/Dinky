@@ -19,6 +19,14 @@ enum Dispatcher {
     /// `window` stands in for the focused window in commands that act on one. Rules supply it directly;
     /// --window-id uses the same path after validating that the window can be targeted.
     static func run(_ command: Command, window: WindowID? = nil, env: [String: String] = [:]) -> Reply {
+        let mouse = MouseFollowFocus.shared
+        let request = window == nil && command.followsMouse ? mouse.begin() : nil
+        let reply = execute(command, window: window, env: env)
+        if let request { mouse.finish(request, succeeded: reply.ok) }
+        return reply
+    }
+
+    private static func execute(_ command: Command, window: WindowID?, env: [String: String]) -> Reply {
         switch command {
         case .targetWindow(let id, let command):
             guard windowList().contains(where: { $0.id == id }),
@@ -51,6 +59,8 @@ enum Dispatcher {
             return moveWindowToWorkspace(target, follow: follow, window: window ?? focusedWindowID())
         case .moveWindowToDisplay(let target, let follow):
             return moveWindowToDisplay(target, follow: follow, window: window ?? focusedWindowID())
+        case .focusBackAndForth:
+            return focusBackAndForth()
         case .focus(let direction, let boundaries, let action):
             return focus(direction, boundaries: boundaries, action: action)
         case .focusMonitor(let target):
@@ -169,12 +179,14 @@ enum Dispatcher {
         let elsewhere = model.focusedDisplay()?.uuid != display.uuid
         if showing, !elsewhere, landed == nil { return .ok("already on workspace \(n)") }
         // Arriving on a Space, macOS activates an app, which can be one whose window is on another Space when the
-        // workspace has no window of the app that had focus. Focus moves to this Space.
+        // workspace has no window of the app that had focus. Focus moves to this Space: its tiled window, else its
+        // frontmost floating one.
         let arrive = landed ?? {
             model.reconcile()
             guard let shown = model.displays.first(where: { $0.uuid == display.uuid }) else { return }
             if !elsewhere, dinky_window_space_id(frontWindowID()) == shown.currentSpaceID { return }
-            _ = focus(shown, window: AppState.shared.coordinator?.workspace(on: shown)?.focused)
+            let coordinator = AppState.shared.coordinator
+            _ = focus(shown, window: coordinator?.workspace(on: shown)?.focused ?? coordinator?.frontFloatingWindow(on: shown))
         }
         if showing {
             arrive()

@@ -65,6 +65,8 @@ final class Coordinator {
     lazy var placeholders = DragPlaceholders()
     /// Called when the focused window changes.
     var onFocusChange: (() -> Void)?
+    var focusHistory = FocusHistory<Window.Identity>()
+    var focusedSpaces: [WindowID: UInt64] = [:]
     private(set) var lastFocused: WindowID = 0
     /// The focused display just before `lastFocused` took focus.
     private(set) var displayBeforeFocus: String?
@@ -163,7 +165,7 @@ final class Coordinator {
         borders?.handle(event)
         if let window = event.window {
             let departure = focusRepair(by: window, removed: event.change == .removed)
-            event.change == .removed ? forget(window.id) : track(window)
+            event.change == .removed ? forget(window.id, window: window) : track(window)
             if let departure { scheduleRefocus(departure) }
             if [.windowMove, .windowResize].contains(event.kind) {
                 noteFrameChange(of: window.id)
@@ -388,8 +390,10 @@ final class Coordinator {
         placements[window.id]!.space = new
     }
 
-    func forget(_ id: WindowID) {
+    func forget(_ id: WindowID, window: Window? = nil) {
         windowIdentifiers[id] = nil
+        if let window { focusHistory.forget(window.identity) }
+        focusedSpaces[id] = nil
         settlements[id] = nil
         adoptTargets[id] = nil
         adopting.remove(id)
@@ -423,26 +427,28 @@ final class Coordinator {
     }
 
     /// Follows focus into the trees, so new windows land beside the focused one and accordions show it.
-    private func syncFocus() {
+    func syncFocus() {
         let id = focusedWindow
-        let deferring = focusing.map { $0.id != id && Date() < $0.until } ?? false
+        if let focusing, focusing.id != id, Date() < focusing.until { return }
+        focusing = nil
+        if !SpaceSwitcher.shared.switching, let window = model.windows[id], window.isDocument,
+           !window.isMinimized, isVisible(window.spaceID) {
+            focusHistory.observe(window.identity)
+            focusedSpaces[id] = window.spaceID
+        }
         if id != lastFocused {
             // Before the override goes: a new window can take focus before it shows. See Adoption.swift.
             displayBeforeFocus = displays.focusedDisplay(window: lastFocused)?.uuid
-            if !deferring {
-                let input = RefocusInput.current
-                let previous = dinky_window_info(lastFocused)
-                focusDeparture.changed(from: lastFocused, to: id, input: input,
-                                       departed: !previous.exists || previous.isMinimized)
-                if let refocus, !refocus.allows(keyboard: keyboardWindow(), input: input) { clearRefocus() }
-            }
+            let input = RefocusInput.current
+            let previous = dinky_window_info(lastFocused)
+            focusDeparture.changed(from: lastFocused, to: id, input: input,
+                                   departed: !previous.exists || previous.isMinimized)
+            if let refocus, !refocus.allows(keyboard: keyboardWindow(), input: input) { clearRefocus() }
             lastFocused = id
             // Only a window takes focus from a display focused without one, not an app with no window here.
             if id != 0 { displays.focusOverride = nil }
             onFocusChange?()
         }
-        if deferring { return }
-        focusing = nil
         guard let key = placements[id]?.space, workspaces[key]?.focused != id else { return }
         edit(key) { $0.focus(id) }
     }

@@ -1,6 +1,7 @@
 import DinkyCommands
 import DinkyConfig
 import DinkyLayout
+import DinkyPrivate
 
 // What commands ask of the coordinator: tree commands on the focused window's Space, floating, and
 // taking in a window dinky moved to another Space.
@@ -21,6 +22,11 @@ extension Coordinator {
               workspace.focused == id, let target = workspace.swipeTarget(direction),
               placements[target]?.space == space else { return nil }
         return target
+    }
+
+    /// The frontmost window dinky floats on the display's current Space, for a workspace with nothing tiled.
+    func frontFloatingWindow(on display: Display) -> WindowID? {
+        dinky_space_window_ids(display.currentSpaceID, false).map(\.uint32Value).first { placements[$0]?.floating == true }
     }
 
     /// The container holding a tiled window.
