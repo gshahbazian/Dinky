@@ -28,6 +28,8 @@ extension Command {
                 + "at its near edge. At the last edge, --boundaries-action stops (the default), fails, wraps to the far "
                 + "side of the workspace, or, with all-monitors-outer-frame, to the display at the far side. "
                 + "--wrap-around is short for --boundaries-action wrap-around-the-workspace. Never switches workspace."),
+        Doc(syntax: "focus-back-and-forth",
+            description: "Toggle between the last two focused windows, switching Spaces when needed."),
         Doc(syntax: "focus-monitor <left|down|up|right|next|prev|N>",
             description: "Focus the display in a direction, the next or previous one, or display N as list-monitors numbers it: its most recently focused window, "
                 + "or the display itself when its workspace is empty, so workspace commands act on it."),

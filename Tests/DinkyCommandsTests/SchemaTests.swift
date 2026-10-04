@@ -119,6 +119,9 @@ struct SchemaTests {
         order = 'above'
         exclude-apps = ['com.apple.finder']
 
+        [mouse-follows-focus]
+        enabled = true
+
         [focus-follows-mouse]
         enabled = true
         delay-ms = 50
