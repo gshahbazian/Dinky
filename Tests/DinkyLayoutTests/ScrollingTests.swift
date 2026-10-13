@@ -230,3 +230,63 @@ struct ScrollingCommandTests {
         #expect(lefts(ws) == [-425, 50, 525], "columns 475 wide between the gutters")
     }
 }
+
+struct CenteredScrollingTests {
+    @Test func loneCenteredColumnUsesConfiguredWidth() {
+        var ws = strip(1, width: 0.8, gaps: Gaps(all: 10))
+        ws.centerFocusedColumn = true
+        let area = ws.gaps.inset(ws.bounds)
+        let frame = ws.layout().frames[1]!
+        #expect(frame.width == (area.width * 0.8).rounded())
+        #expect(abs(frame.midX - area.midX) < 1)
+        #expect(frame.height == area.height)
+        ws.resize(by: 50)
+        #expect(ws.layout().frames[1]!.width == frame.width + 50)
+        #expect(abs(ws.layout().frames[1]!.midX - area.midX) < 1)
+    }
+
+    @Test func removingOtherColumnsKeepsTheConfiguredWidthAndCenter() {
+        var ws = strip(2, width: 0.8)
+        ws.centerFocusedColumn = true
+        ws.remove(2)
+        #expect(ws.layout().frames[1]!.width == (ws.gaps.inset(ws.bounds).width * 0.8).rounded())
+        #expect(abs(ws.layout().frames[1]!.midX - ws.bounds.midX) < 1)
+    }
+
+    @Test func loneCenteredColumnHonorsMinimumWidthAndFullscreen() {
+        var ws = strip(1, width: 0.5)
+        ws.centerFocusedColumn = true
+        ws.minimumSizes[1] = CGSize(width: 800, height: 0)
+        #expect(ws.layout().frames[1]!.width == 800)
+        #expect(abs(ws.layout().frames[1]!.midX - ws.bounds.midX) < 1)
+        ws.isFullscreen = true
+        #expect(ws.layout().frames[1] == ws.gaps.inset(ws.bounds))
+    }
+
+    @Test func centeredFocusIncludesEndColumnsAndResizedColumns() {
+        for walls: Set<Direction> in [[], [.left], [.right], [.left, .right]] {
+            var ws = strip(4, gaps: Gaps(all: 10), walls: walls)
+            ws.centerFocusedColumn = true
+            for id in ws.windows {
+                ws.focus(id)
+                #expect(abs(ws.layout().frames[id]!.midX - ws.gaps.inset(ws.bounds).midX) < 1)
+                ws.resize(by: 100)
+                #expect(abs(ws.layout().frames[id]!.midX - ws.gaps.inset(ws.bounds).midX) < 1)
+            }
+        }
+    }
+
+    @Test func centeredFocusAppliesWhenTwoColumnsFitAndWhenSharingAColumn() {
+        var ws = strip(2, width: 0.49)
+        ws.centerFocusedColumn = true
+        for id in ws.windows {
+            ws.focus(id)
+            #expect(abs(ws.layout().frames[id]!.midX - ws.bounds.midX) < 1)
+        }
+        ws.join(.left)
+        for id in ws.windows {
+            ws.focus(id)
+            #expect(abs(ws.layout().frames[id]!.midX - ws.bounds.midX) < 1)
+        }
+    }
+}

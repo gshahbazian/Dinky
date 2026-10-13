@@ -145,6 +145,7 @@ ctrl-alt-cmd-s = 'layout tiles accordion scrolling'
 
 | Key | Default | |
 |---|---|---|
+| `center-focused-column` | `false` | Center the focused column, including the first and last. A lone column also uses `column-width` instead of filling the display. |
 | `column-width` | `0.49` | A new column's width, as a share of the display inside the outer gaps, from `0.1` to `1`. Omarchy's `0.49` fits two columns side by side. |
 
 </div>
@@ -400,7 +401,7 @@ padding = 30                    # points the neighbours peek out by
 orientation = 'auto'            # auto: run along the container's longer side | keep
 
 [scrolling]
-column-width = 0.49             # a new column's share of the display; a lone column fills it
+column-width = 0.49             # a new column's share of the display
 
 [gaps]
 inner = 8                       # or { horizontal = 8, vertical = 8 }

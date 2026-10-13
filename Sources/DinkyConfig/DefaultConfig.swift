@@ -36,7 +36,8 @@ extension Config {
     orientation = 'auto'            # auto: run along the container's longer side | keep
 
     [scrolling]
-    column-width = 0.49             # a new column's share of the display; a lone column fills it
+    column-width = 0.49             # a new column's share of the display
+    center-focused-column = false
 
     [gaps]
     inner = 8                       # or { horizontal = 8, vertical = 8 }
