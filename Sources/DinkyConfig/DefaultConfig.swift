@@ -43,7 +43,8 @@ extension Config {
     orientation = 'auto'            # auto: run along the container's longer side | keep
 
     [scrolling]
-    column-width = 0.49             # a new column's share of the display; a lone column fills it
+    column-width = 0.49             # a new column's share of the display
+    center-focused-column = false
 
     [master]
     size = 0.6                      # the master's share of the display beside the stack; alone it fills it
