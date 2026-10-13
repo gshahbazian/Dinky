@@ -274,6 +274,7 @@ final class Coordinator {
             workspaces[key]!.accordionPadding = CGFloat(config.accordion.padding)
             workspaces[key]!.autoOrientAccordions = config.accordion.orientation == .auto
             workspaces[key]!.columnWidth = config.scrolling.columnWidth
+            workspaces[key]!.centerFocusedColumn = config.scrolling.centerFocusedColumn
             workspaces[key]!.masterSize = config.master.size
             workspaces[key]!.setMasterSide(config.master.layoutSide)
             workspaces[key]!.setAlgorithm(workspaces[key]!.chosenAlgorithm ?? settings(for: key).algorithm)
@@ -395,6 +396,7 @@ final class Coordinator {
                                         autoOrientAccordions: config.accordion.orientation == .auto,
                                         algorithm: settings.algorithm)
             workspaces[key]!.columnWidth = config.scrolling.columnWidth
+            workspaces[key]!.centerFocusedColumn = config.scrolling.centerFocusedColumn
             workspaces[key]!.masterSize = config.master.size
             workspaces[key]!.setMasterSide(config.master.layoutSide)
             workspaces[key]!.walls = walls(of: display)
