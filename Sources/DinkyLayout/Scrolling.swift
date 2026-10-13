@@ -53,23 +53,34 @@ extension Workspace {
 
     /// Each column's start and width in points along the strip, from its left edge. Half an inner gap is part
     /// of a column on each side that has a neighbour, so neighbours end up a whole gap apart. A lone column is
-    /// as wide as the screen; any other is its share of it, grown to fit its windows' minimum widths.
+    /// full width unless focused-column centering is enabled. Otherwise columns use their configured share,
+    /// grown to fit their windows' minimum widths.
     func columnSpans(in area: CGRect) -> [(start: CGFloat, width: CGFloat)] {
         let count = root.children.count, gap = gaps.horizontal
         var start: CGFloat = 0
         return root.children.indices.map { i in
             let insets = (i > 0 ? gap / 2 : 0) + (i < count - 1 ? gap / 2 : 0)
             let minimum = root.children[i].minimumExtent(.horizontal, gap: gap, padding: accordionPadding, minimumSizes)
-            let width = count == 1 ? area.width : max((area.width * CGFloat(width(ofColumn: i))).rounded(), minimum + insets)
+            let width = count == 1 && !centerFocusedColumn
+                ? area.width
+                : max((area.width * CGFloat(width(ofColumn: i))).rounded(), minimum + insets)
             defer { start += width }
             return (start, width)
         }
     }
 
-    /// The scroll offset the layout uses. The strip never scrolls past either end, and the column at an end
+    /// Center the focused column when requested, allowing empty space at the ends. Otherwise the strip
+    /// never scrolls past either end, and the column at an end
     /// reaches into the gutter there, which nothing is parked in, out to the outer gap. A strip that fits
     /// between the outer gaps is centred.
     func offset(for spans: [(start: CGFloat, width: CGFloat)], in area: CGRect) -> CGFloat {
+        if centerFocusedColumn, let focused, let index = root.path(of: focused)?.first, spans.indices.contains(index) {
+            let column = spans[index]
+            let lead = index > 0 ? gaps.horizontal / 2 : 0
+            let trail = index < spans.count - 1 ? gaps.horizontal / 2 : 0
+            let center = area.minX + column.start + lead + (column.width - lead - trail) / 2
+            return center - gaps.inset(bounds).midX
+        }
         let total = spans.last.map { $0.start + $0.width } ?? 0, inset = gaps.inset(bounds)
         let first = area.minX - inset.minX, last = total - area.width - (inset.maxX - area.maxX)
         guard first < last else { return (first + (total - inset.width) / 2).rounded() }
@@ -81,6 +92,10 @@ extension Workspace {
     mutating func reveal(_ id: WindowID) {
         guard isScrolling, let index = root.path(of: id)?.first else { return }
         let area = stripArea, spans = columnSpans(in: area), column = spans[index]
+        if centerFocusedColumn {
+            scrollOffset = offset(for: spans, in: area)
+            return
+        }
         let current = offset(for: spans, in: area)
         scrollOffset = column.width > area.width
             ? column.start - (area.width - column.width) / 2

@@ -160,6 +160,7 @@ do nothing while it holds one window.
 
 | Key | Default | |
 |---|---|---|
+| `center-focused-column` | `false` | Center the focused column, including the first and last. A lone column also uses `column-width` instead of filling the display. |
 | `column-width` | `0.49` | A new column's width, as a share of the display inside the outer gaps, from `0.1` to `1`. Omarchy's `0.49` fits two columns side by side. |
 
 </div>
@@ -484,7 +485,7 @@ padding = 30                    # points the neighbours peek out by
 orientation = 'auto'            # auto: run along the container's longer side | keep
 
 [scrolling]
-column-width = 0.49             # a new column's share of the display; a lone column fills it
+column-width = 0.49             # a new column's share of the display
 
 [master]
 size = 0.6                      # the master's share of the display beside the stack; alone it fills it
