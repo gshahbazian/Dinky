@@ -85,6 +85,11 @@
           "maximum": 1,
           "default": 0.49,
           "description": "A new column's width as a share of the display. A lone column fills the display."
+        },
+        "center-focused-column": {
+          "type": "boolean",
+          "default": false,
+          "description": "Center the focused column, allowing empty space at either end of the strip."
         }
       }
     },

@@ -230,3 +230,32 @@ struct ScrollingCommandTests {
         #expect(lefts(ws) == [-425, 50, 525], "columns 475 wide between the gutters")
     }
 }
+
+struct CenteredScrollingTests {
+    @Test func centeredFocusIncludesEndColumnsAndResizedColumns() {
+        for walls: Set<Direction> in [[], [.left], [.right], [.left, .right]] {
+            var ws = strip(4, gaps: Gaps(all: 10), walls: walls)
+            ws.centerFocusedColumn = true
+            for id in ws.windows {
+                ws.focus(id)
+                #expect(abs(ws.layout().frames[id]!.midX - ws.gaps.inset(ws.bounds).midX) < 1)
+                ws.resize(by: 100)
+                #expect(abs(ws.layout().frames[id]!.midX - ws.gaps.inset(ws.bounds).midX) < 1)
+            }
+        }
+    }
+
+    @Test func centeredFocusAppliesWhenTwoColumnsFitAndWhenSharingAColumn() {
+        var ws = strip(2, width: 0.49)
+        ws.centerFocusedColumn = true
+        for id in ws.windows {
+            ws.focus(id)
+            #expect(abs(ws.layout().frames[id]!.midX - ws.bounds.midX) < 1)
+        }
+        ws.join(.left)
+        for id in ws.windows {
+            ws.focus(id)
+            #expect(abs(ws.layout().frames[id]!.midX - ws.bounds.midX) < 1)
+        }
+    }
+}

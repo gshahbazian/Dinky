@@ -36,6 +36,7 @@ public struct Workspace: Equatable, Sendable {
     public var minimumSizes: [WindowID: CGSize] = [:]
     /// Scrolling: the width of a new column, as a share of the width inside the outer gaps.
     public var columnWidth = 0.5
+    public var centerFocusedColumn = false
     /// Scrolling: each window's column width, as a share. Every window of a column has its column's width.
     var columnWidths: [WindowID: Double] = [:]
     /// Scrolling: how far the strip is scrolled, in points from its start. The layout clamps it.

@@ -35,6 +35,7 @@ extension Config {
 
     [scrolling]
     column-width = 0.49             # a new column's share of the display; a lone column fills it
+    center-focused-column = false
 
     [gaps]
     inner = 8                       # or { horizontal = 8, vertical = 8 }

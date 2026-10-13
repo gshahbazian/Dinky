@@ -72,6 +72,7 @@ struct SchemaTests {
         orientation = 'keep'
 
         [scrolling]
+        center-focused-column = true
         column-width = 0.5
 
         [gaps]

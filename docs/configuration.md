@@ -125,6 +125,7 @@ ctrl-alt-cmd-s = 'layout tiles accordion scrolling'
 
 | Key | Default | |
 |---|---|---|
+| `center-focused-column` | `false` | Center the focused column, including the first and last columns. |
 | `column-width` | `0.49` | A new column's width, as a share of the display inside the outer gaps, from `0.1` to `1`. Omarchy's `0.49` fits two columns side by side. |
 
 </div>

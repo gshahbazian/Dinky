@@ -215,11 +215,13 @@ public struct Scrolling: Equatable {
     /// A new column's width, as a share of the display's width inside the outer gaps. Omarchy's 0.49 fits two
     /// columns side by side with a sliver of margin; a lone column always fills the display.
     public var columnWidth = 0.49
+    public var centerFocusedColumn = false
 
     public init() {}
 
     init(_ t: Table) throws {
         columnWidth = try t.double("column-width") ?? columnWidth
+        centerFocusedColumn = try t.bool("center-focused-column") ?? centerFocusedColumn
         guard (0.1...1).contains(columnWidth) else { throw ConfigError(path: t.path("column-width"), "must be 0.1 to 1") }
         try t.done()
     }
