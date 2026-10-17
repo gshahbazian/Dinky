@@ -1,0 +1,4 @@
+interface:
+  display_name: "rebase on upstream latest"
+  short_description: "Rebase our Dinky fork onto the latest upstream release"
+  default_prompt: "Use $rebase-on-upstream-latest to review the latest upstream Dinky release, trial-rebase our changes, validate it, and discuss dotfiles config updates."
