@@ -86,12 +86,13 @@ final class MouseFollowFocus {
             return schedule(request, deadline: deadline, target: target)
         }
         state.displays.reconcile()
-        guard let display = state.displays.focusedDisplay() else { return }
         let rect: CGRect
-        if let window = state.coordinator?.model.windows[focused], window.spaceID == display.currentSpaceID,
-           window.isNormal, !window.isMinimized {
+        // The window's own display: the focused one lags behind a window focused on another display.
+        if let window = state.coordinator?.model.windows[focused], window.isNormal, !window.isMinimized,
+           state.displays.display(containingSpace: window.spaceID)?.currentSpaceID == window.spaceID {
             rect = dinky_window_info(focused).frame
         } else {
+            guard let display = state.displays.focusedDisplay() else { return }
             // Do not center the display for an untracked dialog or app window.
             guard let coordinator = state.coordinator,
                   !coordinator.model.windows.values.contains(where: {
