@@ -163,7 +163,18 @@
         "additionalProperties": false,
         "properties": {
           "gaps": { "$ref": "#/definitions/gaps" },
-          "fullscreen-width": { "type": "number", "minimum": 0.1, "maximum": 1, "default": 1, "description": "The share of the width a fullscreen window, or a window alone, takes on this display, over the top-level value." }
+          "fullscreen-width": { "type": "number", "minimum": 0.1, "maximum": 1, "default": 1, "description": "The share of the width a fullscreen window, or a window alone, takes on this display, over the top-level value." },
+          "single-group": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "max-width": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "The single group's maximum width in points on this display, in place of the general one."
+              }
+            }
+          }
         }
       }
     },

@@ -1,5 +1,5 @@
-// Gaps in points, the `[display.<pattern>]` tables that override them for one display, and the display
-// patterns those tables, `[workspace.N.display.<pattern>]` and `[workspace-to-display]` use.
+// Gaps in points, the `[display.<pattern>]` tables that override them and the single group's width for one
+// display, and the display patterns those tables, `[workspace.N.display.<pattern>]` and `[workspace-to-display]` use.
 
 /// The gap between side-by-side windows (`horizontal`) and between stacked ones (`vertical`).
 public struct Inner: Equatable {
@@ -119,12 +119,15 @@ public struct DisplayOverride: Equatable {
     public var gaps = GapsPatch()
     /// `fullscreen-width` on these displays, nil for the top-level value.
     public var fullscreenWidth: Double?
+    /// `single-group.max-width`: nil keeps the general one.
+    public var singleGroupMaxWidth: Int?
 
     init(_ pattern: String, _ t: Table) throws {
         guard !pattern.isEmpty else { throw ConfigError(path: t.path, "a display pattern can't be empty") }
         self.pattern = MonitorPattern(pattern)
         gaps = try t.table("gaps").map(GapsPatch.init) ?? gaps
         fullscreenWidth = try t.fullscreenWidth()
+        singleGroupMaxWidth = try t.table("single-group").flatMap(Config.singleGroupMaxWidth)
         if try t.int("workspaces") != nil {
             throw ConfigError(path: t.path("workspaces"),
                               "workspaces are numbered across displays now; put one on a display with [workspace-to-display]")
@@ -143,5 +146,10 @@ extension Config {
     /// The gaps on `monitor`: the general ones, with the overrides of every matching display table applied.
     public func gaps(for monitor: Monitor) -> Gaps {
         overrides(for: monitor).reduce(gaps) { $0.applying($1.gaps) }
+    }
+
+    /// The single group's maximum width on `monitor`: the most specific matching display table's, else the general one.
+    public func singleGroupMaxWidth(for monitor: Monitor) -> Int? {
+        overrides(for: monitor).reduce(singleGroupMaxWidth) { $1.singleGroupMaxWidth ?? $0 }
     }
 }

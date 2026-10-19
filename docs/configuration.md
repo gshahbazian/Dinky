@@ -218,7 +218,8 @@ its own.
 
 Set `max-width = 1400` to cap a lone tiled window or accordion group's width in macOS points and
 center it horizontally within the available area after outer gaps. Height is
-unchanged. Omit the setting to use the full width. This applies on every display;
+unchanged. Omit the setting to use the full width. This applies on every display,
+unless a [`[display.<pattern>]`](#displaypattern) table sets its own `single-group.max-width`;
 smaller displays use their available width. Floating windows do not count, and
 native tabs share one tile. An accordion stack counts as one group, including its
 peeking edges. A split inside a stack, or a separate second group, restores normal tiling.
@@ -269,7 +270,7 @@ own workspace once the displays settle.
 
 ## `[display.<pattern>]`
 
-Per-display `gaps` and `fullscreen-width`, with the patterns above. Name
+Per-display `gaps`, `fullscreen-width`, and [`single-group.max-width`](#single-group), with the patterns above. Name
 patterns beat `main`/`secondary`; longer names beat shorter. A workspace's
 layout per display goes in
 [`[workspace.<number>.display.<pattern>]`](#workspacenumberdisplaypattern),
@@ -282,6 +283,8 @@ gaps.outer.top = 44
 
 [display.'DELL U3421WE']   # an ultrawide: a fullscreen or lone window takes half the width, centred
 fullscreen-width = 0.55
+[display.built-in]      # a narrower lone window on the laptop screen
+single-group.max-width = 1400
 ```
 
 ## `[borders]`

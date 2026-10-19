@@ -126,13 +126,7 @@ public struct Config: Equatable {
         accordion = try t.table("accordion").map(Accordion.init) ?? accordion
         scrolling = try t.table("scrolling").map(Scrolling.init) ?? scrolling
         master = try t.table("master").map(Master.init) ?? master
-        if let single = try t.table("single-group") {
-            singleGroupMaxWidth = try single.int("max-width")
-            if let width = singleGroupMaxWidth, width <= 0 {
-                throw ConfigError(path: single.path("max-width"), "must be greater than zero")
-            }
-            try single.done()
-        }
+        singleGroupMaxWidth = try t.table("single-group").map(Self.singleGroupMaxWidth) ?? singleGroupMaxWidth
         gaps = try t.table("gaps").map { try gaps.applying(GapsPatch($0)) } ?? gaps
         if let displayTable = try t.table("display") {
             for pattern in displayTable.keys {
@@ -156,6 +150,14 @@ public struct Config: Equatable {
             }
         }
         try t.done()
+    }
+
+    /// A `[single-group]` table's `max-width`, top-level or in a `[display.<pattern>]` table.
+    static func singleGroupMaxWidth(_ t: Table) throws -> Int? {
+        let width = try t.int("max-width")
+        if let width, width <= 0 { throw ConfigError(path: t.path("max-width"), "must be greater than zero") }
+        try t.done()
+        return width
     }
 }
 
