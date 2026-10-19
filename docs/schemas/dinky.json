@@ -160,7 +160,18 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "gaps": { "$ref": "#/definitions/gaps" }
+          "gaps": { "$ref": "#/definitions/gaps" },
+          "single-group": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "max-width": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "The single group's maximum width in points on this display, in place of the general one."
+              }
+            }
+          }
         }
       }
     },
