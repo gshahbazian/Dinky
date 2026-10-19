@@ -166,7 +166,18 @@
         "properties": {
           "gaps": { "$ref": "#/definitions/gaps" },
           "fullscreen-width": { "type": "number", "minimum": 0.1, "maximum": 1, "default": 1, "description": "The share of the width a fullscreen window takes on this display. Lone windows use it unless lone-window-width is set." },
-          "lone-window-width": { "type": "number", "minimum": 0.1, "maximum": 1, "description": "A lone window's centred share on this display, over the top-level value. Workspace tables override it. If unset everywhere, uses the resolved fullscreen-width." }
+          "lone-window-width": { "type": "number", "minimum": 0.1, "maximum": 1, "description": "A lone window's centred share on this display, over the top-level value. Workspace tables override it. If unset everywhere, uses the resolved fullscreen-width." },
+          "single-group": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "max-width": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "The single group's maximum width in points on this display, in place of the general one."
+              }
+            }
+          }
         }
       }
     },

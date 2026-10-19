@@ -108,6 +108,7 @@ struct SchemaTests {
         [display.main]
         fullscreen-width = 0.6
         lone-window-width = 0.5
+        single-group.max-width = 1200
         gaps.inner = 2
         gaps.outer.top = 30
         gaps.outer.bottom = 0
@@ -117,6 +118,7 @@ struct SchemaTests {
         [display.secondary]
         fullscreen-width = 0.5
         lone-window-width = 0.4
+        single-group.max-width = 1200
         gaps.inner.horizontal = 1
         gaps.inner.vertical = 1
         gaps.outer = 8

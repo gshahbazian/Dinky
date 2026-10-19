@@ -247,17 +247,19 @@ final class Coordinator {
         flush()
     }
 
-    /// Bounds and gaps of every tree from the display its Space is on now, which can have moved, resized or become
-    /// main, or be another display, as when macOS moves a disconnected display's Spaces. A tree whose Space is on
-    /// no display is left as it is; one whose layout this changes is marked dirty.
+    /// Bounds, gaps and single group width of every tree from the display its Space is on now, which can have
+    /// moved, resized or become main, or be another display, as when macOS moves a disconnected display's Spaces.
+    /// A tree whose Space is on no display is left as it is; one whose layout this changes is marked dirty.
     private func fitToDisplays() {
         for key in workspaces.keys {
             guard let display = displays.display(containingSpace: key) else { continue }
             let (bounds, gaps, walls) = (area(of: display), self.gaps(on: display), self.walls(of: display))
+            let maxWidth = singleGroupMaxWidth(on: display)
             edit(key) {
                 $0.bounds = bounds
                 $0.gaps = gaps
                 $0.walls = walls
+                $0.singleGroupMaxWidth = maxWidth
             }
         }
     }
@@ -283,6 +285,7 @@ final class Coordinator {
         tree.bounds = area(of: display)
         tree.gaps = gaps(on: display)
         tree.walls = walls(of: display)
+        tree.singleGroupMaxWidth = singleGroupMaxWidth(on: display)
         workspaces[to] = tree
         for (id, placement) in placements where placement.space == from { placements[id]!.space = to }
     }
@@ -291,7 +294,6 @@ final class Coordinator {
     /// are reordered or displays come and go.
     private func configureWorkspaces() {
         for key in workspaces.keys {
-            workspaces[key]!.singleGroupMaxWidth = config.singleGroupMaxWidth.map { CGFloat($0) }
             workspaces[key]!.accordionPadding = CGFloat(config.accordion.padding)
             workspaces[key]!.autoOrientAccordions = config.accordion.orientation == .auto
             workspaces[key]!.columnWidth = config.scrolling.columnWidth
@@ -311,6 +313,10 @@ final class Coordinator {
 
     private func gaps(on display: Display) -> DinkyLayout.Gaps {
         DinkyLayout.Gaps(config.gaps(for: displays.monitor(display)))
+    }
+
+    private func singleGroupMaxWidth(on display: Display) -> CGFloat? {
+        config.singleGroupMaxWidth(for: displays.monitor(display)).map { CGFloat($0) }
     }
 
     /// The settings of the Space's workspace, by its current number, on the display it is on now.
@@ -442,7 +448,7 @@ final class Coordinator {
             workspaces[key]!.fullscreenWidth = fullscreenWidth(for: key)
             workspaces[key]!.loneWindowWidth = loneWindowWidth(for: key)
             workspaces[key]!.walls = walls(of: display)
-            workspaces[key]!.singleGroupMaxWidth = config.singleGroupMaxWidth.map { CGFloat($0) }
+            workspaces[key]!.singleGroupMaxWidth = singleGroupMaxWidth(on: display)
         }
         return key
     }
