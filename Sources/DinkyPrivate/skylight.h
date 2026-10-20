@@ -27,6 +27,8 @@ extern CGError SLSGetWindowOwner(int cid, uint32_t wid, int *wcid);
 extern CGError SLSConnectionGetPID(int cid, pid_t *pid);
 extern CGError SLSGetConnectionIDForPSN(int cid, ProcessSerialNumber *psn, int *psnCID);
 extern OSStatus _SLPSGetFrontProcess(ProcessSerialNumber *psn);
+extern CGError _SLPSSetFrontProcessWithOptions(ProcessSerialNumber *psn, uint32_t wid, uint32_t mode);
+extern CGError SLPSPostEventRecordTo(ProcessSerialNumber *psn, uint8_t *bytes);
 
 // The bridged window management dispatchers are non-exported C++ statics in SkyLight. They cannot be
 // linked or dlsym'd; this finds one by walking SkyLight's Mach-O symbol table (yabai macho_find_symbol,

@@ -54,25 +54,32 @@ func frontWindowID() -> UInt32 {
     return axElement(element, kAXFocusedWindowAttribute).map(axWindowID) ?? 0
 }
 
-/// Focuses a window on a Space that is on screen: AX raise, then activate its app. Never switches Spaces:
-/// the activation is dinky's own, so the activation follower is told not to chase the app's frontmost
-/// window, which can still be one on another Space when the activation lands. This is the primitive for windows
-/// no tree models (e.g. `focusOnScreen` when the coordinator is not running); a window the coordinator models is
-/// focused through `Coordinator.focus(_:)`, which also arms the grace against stale focus reads.
+/// Focuses a window on a Space that is on screen: brings its app forward with the window key, then raises it.
+/// Never switches Spaces: the activation is dinky's own, so the activation follower is told not to chase the
+/// app's frontmost window, which can still be one on another Space when the activation lands. This is the
+/// primitive for windows no tree models (e.g. `focusOnScreen` when the coordinator is not running); a window the
+/// coordinator models is focused through `Coordinator.focus(_:)`, which also arms the grace against stale focus reads.
 func focusWindow(pid: pid_t, id: UInt32) {
     // Focus is on a window again, even when it is the one that had it before a `focus-monitor`.
     AppState.shared.displays.focusOverride = nil
     if AppState.shared.displays.display(ofWindow: id) != nil {
         noteOwnSwitch()
     }
-    if let element = axWindow(pid: pid, wid: id, timeout: FrameApplier.timeout) {
+    let element = axWindow(pid: pid, wid: id, timeout: FrameApplier.timeout)
+    if let element {
         // Raise alone makes the window main; the app's key window can stay one on another Space, and the
         // next command would then act on that one. Make this window main and key explicitly.
         AXUIElementSetAttributeValue(element, kAXMainAttribute as CFString, kCFBooleanTrue)
         AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+    }
+    // Activating the app instead races the key window set above: Chrome, activated right after, can go back to
+    // its previous key window when that one is on screen on another display.
+    if !dinky_focus_window(pid, id) {
+        NSRunningApplication(processIdentifier: pid)?.activate()
+    }
+    if let element {
         AXUIElementPerformAction(element, kAXRaiseAction as CFString)
     }
-    NSRunningApplication(processIdentifier: pid)?.activate()
 }
 
 /// Activates Finder when `display` has no window to focus, as macOS does on an empty Space with the desktop shown.
