@@ -81,9 +81,17 @@ layout = 'accordion'
 ## Focus
 
 One window has focus, and its border says so. `focus left` and friends move it
-to the nearest window that way; with `--boundaries all-monitors-outer-frame`,
+to the next window in spatial order; with `--boundaries all-monitors-outer-frame`,
 across the display edge too. [`[focus-follows-mouse]`](configuration.md#focus-follows-mouse)
 moves it with the pointer instead.
+
+Directional focus steps through windows ordered by their centers: left/right
+uses horizontal position, then vertical position to break ties; up/down uses
+vertical position, then horizontal position. Identical centers are ordered by
+window ID. Opposite directions reverse the same order. With `--wrap-around`,
+repeated presses visit every window on the workspace before returning to the
+starting window, as long as their positions stay fixed. Floating and tiled
+windows share this order.
 
 ## Rule
 

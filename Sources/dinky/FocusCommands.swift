@@ -20,7 +20,7 @@ extension Dispatcher {
         }
         let from = frames[front.id] ?? front.frame
         let candidates = frames.filter { $0.key != front.id }.map { ($0.key, $0.value) }
-        if let id = directionalWindow(from: from, candidates: candidates, direction: direction) {
+        if let id = directionalWindow(from: (front.id, from), candidates: candidates, direction: direction) {
             return focus(window: id)
         }
         let model = AppState.shared.displays
@@ -36,7 +36,7 @@ extension Dispatcher {
         case .fail:
             return .error("no window \(direction)")
         case .wrapAroundTheWorkspace:
-            guard let id = wrappedDirectionalWindow(from: from, candidates: candidates, direction: direction) else {
+            guard let id = wrappedDirectionalWindow(candidates: candidates, direction: direction) else {
                 return .ok("no window to wrap around to")
             }
             return focus(window: id)
@@ -146,10 +146,10 @@ extension Dispatcher {
         let id: WindowID?
         if let front = windows.first(where: { $0.id == frontWindowID() }) {
             let candidates = frames.filter { $0.key != front.id }.map { ($0.key, $0.value) }
-            id = directionalWindow(from: frames[front.id] ?? front.frame, candidates: candidates, direction: direction)
+            id = directionalWindow(from: (front.id, frames[front.id] ?? front.frame), candidates: candidates, direction: direction)
         } else {
             let candidates = frames.map { ($0.key, $0.value) }
-            id = wrappedDirectionalWindow(from: main.visibleArea, candidates: candidates, direction: direction)
+            id = wrappedDirectionalWindow(candidates: candidates, direction: direction)
         }
         guard let id, let next = windows.first(where: { $0.id == id }) else {
             return .error("no window \(direction)")
