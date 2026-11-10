@@ -26,7 +26,21 @@ extension Coordinator {
 
     /// The frontmost window dinky floats on the display's current Space, for a workspace with nothing tiled.
     func frontFloatingWindow(on display: Display) -> WindowID? {
-        dinky_space_window_ids(display.currentSpaceID, false).map(\.uint32Value).first { placements[$0]?.floating == true }
+        frontFloatingWindow(in: display.currentSpaceID)
+    }
+
+    /// The frontmost window dinky floats on a Space, other than `excluded`.
+    func frontFloatingWindow(in space: UInt64, excluding excluded: WindowID? = nil) -> WindowID? {
+        dinky_space_window_ids(space, false).map(\.uint32Value).first { id in
+            guard id != excluded, placements[id]?.floating == true, let window = model.windows[id] else { return false }
+            return window.isNormal && !window.isMinimized
+        }
+    }
+
+    /// The window to focus when `leaving` goes from a Space: its focused tile, else its frontmost floating window.
+    func successor(in space: UInt64, leaving: WindowID) -> WindowID? {
+        if let tiled = workspaces[space]?.focused, tiled != leaving { return tiled }
+        return frontFloatingWindow(in: space, excluding: leaving)
     }
 
     /// The container holding a tiled window.
@@ -127,7 +141,7 @@ extension Coordinator {
         guard model.windows[id] != nil else { return }
         // Re-reads its Space; the update it publishes reaches handle, which tracks the window and flushes.
         model.refresh(id)
-        guard let source, let successor = workspaces[source]?.focused, successor != id else { return }
+        guard let source, let successor = successor(in: source, leaving: id) else { return }
         focus(successor)
     }
 }
