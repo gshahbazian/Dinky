@@ -509,7 +509,7 @@ final class Coordinator {
         clearRefocus()
         let id = request.leaving.id, space = request.leaving.space
         guard dragging == nil, !CGEventSource.buttonState(.combinedSessionState, button: .left),
-              let successor = workspaces[space]?.focused, successor != id else { return }
+              successor(in: space, leaving: id) != nil else { return }
         refocus = request
         let check = DispatchWorkItem { [weak self] in
             guard let self, refocus == request else { return }
@@ -517,7 +517,7 @@ final class Coordinator {
             refocus = nil
             guard enabled, !MissionControl.shared.active, isVisible(space), displays.focusOverride == nil,
                   !CGEventSource.buttonState(.combinedSessionState, button: .left),
-                  let target = workspaces[space]?.focused, target != id,
+                  let target = successor(in: space, leaving: id),
                   model.windows[target]?.isNormal == true else { return }
             guard request.allows(keyboard: keyboardWindow(), input: .current),
                   let pid = model.windows[target]?.pid,
